@@ -7,11 +7,11 @@ const weatherIconElem = document.getElementById("weather-icon");
 const temperatureElem = document.getElementById("temperature");
 const forecastGridElem = document.querySelector(".forecast-grid");
 
-async function fetchWeather(city) {
+async function fetchWeather(cityOrCoords) {
     try {
-        const response = await fetch(API_URL + encodeURIComponent(city));
+        const response = await fetch(API_URL + encodeURIComponent(cityOrCoords));
         if (!response.ok) {
-            throw new Error("City not found");
+            throw new Error("Location not found");
         }
         const data = await response.json();
         updateCurrentWeather(data);
@@ -23,7 +23,6 @@ async function fetchWeather(city) {
 
 function updateCurrentWeather(data) {
     cityNameElem.textContent = data.location.name;
-    // Prepend 'https:' to fix the relative protocol URL bug
     weatherIconElem.src = "https:" + data.current.condition.icon;
     temperatureElem.textContent = Math.round(data.current.temp_c) + "°C";
 }
@@ -33,10 +32,8 @@ function updateForecast(data) {
     
     data.forecast.forecastday.forEach(day => {
         const forecastItem = document.createElement("div");
-        // FIXED: Changed to 'forecast-card' to match your premium CSS classes!
         forecastItem.classList.add("forecast-card");
         
-        // Let's format the date to look cleaner (e.g., getting the day name)
         const dateObj = new Date(day.date);
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
 
@@ -49,11 +46,39 @@ function updateForecast(data) {
     });
 }
 
-fetchWeatherBtn.addEventListener("click", () => {
+
+function handleSearch() {
     const city = searchInput.value.trim();
     if (city === "") return;
     fetchWeather(city);
+}
+
+fetchWeatherBtn.addEventListener("click", handleSearch);
+
+searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        handleSearch();
+    }
 });
 
-// Pre-load a gorgeous default city so your glassmorphism card looks amazing immediately!
-fetchWeather("Bangalore");
+function initWeather() {
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                fetchWeather(`${lat},${lon}`);
+            },
+            (error) => {
+                console.warn("Geolocation access denied or failed. Loading default city.");
+                fetchWeather("Bangalore");
+            }
+        );
+    } else {
+
+        fetchWeather("Bangalore");
+    }
+}
+
+initWeather();
